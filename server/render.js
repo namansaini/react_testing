@@ -9,6 +9,7 @@
 import * as React from "react";
 // import {renderToString} from 'react-dom/server';
 import { renderToPipeableStream } from "react-dom/server";
+import { renderToStream } from 'react-streaming/server'
 import App from "../src/App";
 import { DataProvider } from "../src/data";
 import { API_DELAY, ABORT_DELAY } from "./delays";
@@ -37,27 +38,59 @@ module.exports = function render(url, res) {
   });
   let didError = false;
   const data = createServerData();
-  const stream = renderToPipeableStream(
-    <DataProvider data={data}>
+ 
+  renderToStream(
+    // <DataProvider data={data}>
       <App assets={assets} />
-    </DataProvider>,
-    {
-      bootstrapScripts: [assets["main.js"]],
-      onShellReady() {
-        // If something errored before we started streaming, we set the error code appropriately.
-        res.statusCode = didError ? 500 : 200;
-        res.setHeader("Content-type", "text/html");
-        stream.pipe(res);
-      },
-      onError(x) {
-        didError = true;
-        console.error(x);
-      }
+    // </DataProvider>
+    ,{
+      disable: false
     }
-  );
+  )
+  .then(data => {
+    const { pipe, injectToStream, streamEnd } = data || {}
+    streamEnd.then(success => {
+      if (success) {
+        console.log('✅ <Page> succesfully rendered')
+      } else {
+        console.log('❌ A <Suspense> boundary failed')
+      }
+    })
+    // const x = {
+    //   write: (chunk, encoding, callback) => {
+    //     console.log('running custom write function')
+    //     console.log(chunk.toString('utf8'))
+    //     return res.write(chunk.toString('utf8'), 'utf8', () => { console.log('writing done')})
+    //   }
+    // }
+    res.statusCode = 200
+    // res.setHeader("Content-type", "text/html")
+    // injectToStream('<script type="module" src="/main.js"></script>')
+    pipe(res)
+  })
+  .catch(err => console.error(err))
+
+  // const stream = renderToPipeableStream(
+  //   <DataProvider data={data}>
+  //     <App assets={assets} />
+  //   </DataProvider>,
+  //   {
+  //     bootstrapScripts: [assets["main.js"]],
+  //     onShellReady() {
+  //       // If something errored before we started streaming, we set the error code appropriately.
+  //       res.statusCode = didError ? 500 : 200;
+  //       res.setHeader("Content-type", "text/html");
+  //       stream.pipe(res);
+  //     },
+  //     onError(x) {
+  //       didError = true;
+  //       console.error(x);
+  //     }
+  //   }
+  // );
   // Abandon and switch to client rendering if enough time passes.
   // Try lowering this to see the client recover.
-  setTimeout(() => stream.abort(), ABORT_DELAY);
+  // setTimeout(() => stream.abort(), ABORT_DELAY);
 };
 
 // Simulate a delay caused by data fetching.

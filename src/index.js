@@ -7,6 +7,7 @@
  */
 
 import { hydrateRoot } from "react-dom/client";
+import { ReactStreaming } from 'react-streaming/client'
 import App from "./App";
 
-hydrateRoot(document, <App assets={window.assetManifest} />);
+hydrateRoot(document, <ReactStreaming><App assets={window.assetManifest} /></ReactStreaming>);

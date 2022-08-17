@@ -75,6 +75,7 @@ function handleErrors(fn) {
     try {
       return await fn(req, res);
     } catch (x) {
+      console.log('catched', x)
       next(x);
     }
   };
