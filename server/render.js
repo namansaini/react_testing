@@ -39,34 +39,29 @@ module.exports = function render(url, res) {
   let didError = false;
   const data = createServerData();
  
+  const opts = {
+    bootstrapScripts: [assets["main.js"]],
+    bootstrapScriptContent: 'window.x = 1'
+  }
+  const renderToPipeStream = (app, options = {}) => renderToPipeableStream(app, Object.assign({}, opts, options))
   renderToStream(
-    // <DataProvider data={data}>
+    <DataProvider data={data}>
       <App assets={assets} />
-    // </DataProvider>
-    ,{
-      disable: false
+    </DataProvider>,
+    {
+      disable: false,
+      renderToPipeableStream: renderToPipeStream
     }
   )
   .then(data => {
     const { pipe, injectToStream, streamEnd } = data || {}
-    streamEnd.then(success => {
-      if (success) {
-        console.log('✅ <Page> succesfully rendered')
-      } else {
-        console.log('❌ A <Suspense> boundary failed')
-      }
+    pipe({
+      flush: () => res.flush(),
+      end: () => res.end(),
+      destroy: (err) => res.destroy(err),
+      write: (buffer, encoding, cb) => res.write(buffer, () => cb && cb())
     })
-    // const x = {
-    //   write: (chunk, encoding, callback) => {
-    //     console.log('running custom write function')
-    //     console.log(chunk.toString('utf8'))
-    //     return res.write(chunk.toString('utf8'), 'utf8', () => { console.log('writing done')})
-    //   }
-    // }
-    res.statusCode = 200
-    // res.setHeader("Content-type", "text/html")
-    // injectToStream('<script type="module" src="/main.js"></script>')
-    pipe(res)
+    injectToStream('<style>body {background: red}</style>')
   })
   .catch(err => console.error(err))
 
